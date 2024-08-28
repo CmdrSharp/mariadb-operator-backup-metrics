@@ -109,11 +109,11 @@ impl MetricCache {
 
         let mut rendered = String::new();
 
-        for ((metric_name, resource_name), metric) in &self.metrics {
+        for ((metric_name, _), metric) in &self.metrics {
             rendered.push_str(&format!("# TYPE {} gauge\n", metric_name));
 
             rendered.push_str(&format!(
-                "{}{{{} {}}} {}\n",
+                "{}{{{}}} {}\n",
                 metric_name,
                 metric
                     .labels
@@ -121,7 +121,6 @@ impl MetricCache {
                     .map(|(k, v)| format!("{}=\"{}\"", k, v))
                     .collect::<Vec<String>>()
                     .join(","),
-                resource_name,
                 metric.value
             ));
         }
