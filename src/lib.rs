@@ -79,12 +79,6 @@ impl AppState {
     /// Update the metrics
     pub async fn update_metrics(&self, metrics: MetricCache) {
         *self.metrics.write().await = metrics;
-        // let metrics = *self.metrics.write().await;
-        // metrics.generate(self).await;
-
-        //*self.metrics.write().await = metrics;
-        // let mut metrics = self.metrics.write().await;
-        // metrics.generate(self).await;
     }
 
     /// Get the arguments
