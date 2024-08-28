@@ -108,4 +108,18 @@ impl BackupStatus {
             .find(|c| c.type_ == "Complete")
             .and_then(|c| c.reason.clone())
     }
+
+    /// Get the timestamp of the last run
+    pub fn last_run(&self) -> Option<i64> {
+        self.conditions
+            .as_ref()?
+            .iter()
+            .find(|c| c.type_ == "Complete" && c.status == "True")
+            .and_then(|c| c.last_transition_time.clone())
+            .and_then(|t| {
+                chrono::DateTime::parse_from_rfc3339(&t)
+                    .ok()
+                    .map(|d| d.timestamp())
+            })
+    }
 }
