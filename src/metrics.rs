@@ -22,6 +22,8 @@ pub struct MetricCache {
 impl MetricCache {
     /// Generate metrics
     pub async fn generate(&mut self, state: &AppState) {
+        tracing::debug!("Generating metrics");
+
         let cache = state.cache().await;
 
         for (name, crd) in cache {
@@ -52,6 +54,8 @@ impl MetricCache {
 
     /// Generate a status metric
     async fn status(&self, name: String, status: &BackupStatus) -> GaugeMetric {
+        tracing::debug!("Generating status metric for resource {}", name.clone());
+
         let mut metric = self
             .find_or_create_metric(("backup_last_run_status".into(), name.clone()))
             .await;
@@ -77,12 +81,22 @@ impl MetricCache {
         name: String,
         status: &BackupStatus,
     ) -> Option<GaugeMetric> {
+        tracing::debug!("Generating timestamp metric for resource {}", name.clone());
+
         let mut metric = self
             .find_or_create_metric(("backup_last_run_timestamp".into(), name.clone()))
             .await;
 
         if status.success() {
+            tracing::debug!("Status is successful for resource {}", name.clone());
+
             if let Some(timestamp) = status.last_run() {
+                tracing::debug!(
+                    "Setting timestamp: {} for resource {}",
+                    timestamp,
+                    name.clone()
+                );
+
                 metric.value = timestamp as usize;
             }
         }
@@ -97,6 +111,8 @@ impl MetricCache {
 
     /// Render metrics
     async fn render(&mut self) {
+        tracing::debug!("Rendering metrics");
+
         let mut rendered = String::new();
 
         for ((metric_name, resource_name), metric) in &self.metrics {
