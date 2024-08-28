@@ -1,8 +1,11 @@
+use chrono::{DateTime, Utc};
 use clap::Parser;
-use std::{collections::HashMap, net::Ipv4Addr, sync::Arc, time::Instant};
+use metrics::MetricCache;
+use std::{collections::HashMap, net::Ipv4Addr, sync::Arc};
 use tokio::sync::RwLock;
 
 mod crd;
+mod metrics;
 
 pub type BackupCrd = crd::Backup;
 pub type SharedAppState = Arc<AppState>;
@@ -34,6 +37,7 @@ pub struct AppState {
     health: RwLock<AppHealth>,
     args: Args,
     cache: RwLock<HashMap<String, BackupCrd>>,
+    metrics: RwLock<MetricCache>,
 }
 
 impl AppState {
@@ -43,6 +47,7 @@ impl AppState {
             health: RwLock::new(AppHealth::default()),
             args,
             cache: RwLock::new(HashMap::new()),
+            metrics: RwLock::new(MetricCache::default()),
         }
     }
 
@@ -66,6 +71,22 @@ impl AppState {
         *self.health.write().await = health;
     }
 
+    /// Get the metrics
+    pub async fn metrics(&self) -> MetricCache {
+        self.metrics.read().await.clone()
+    }
+
+    /// Update the metrics
+    pub async fn update_metrics(&self, metrics: MetricCache) {
+        *self.metrics.write().await = metrics;
+        // let metrics = *self.metrics.write().await;
+        // metrics.generate(self).await;
+
+        //*self.metrics.write().await = metrics;
+        // let mut metrics = self.metrics.write().await;
+        // metrics.generate(self).await;
+    }
+
     /// Get the arguments
     pub fn args(&self) -> &Args {
         &self.args
@@ -74,21 +95,25 @@ impl AppState {
 
 #[derive(Debug, Clone, Default)]
 pub struct AppHealth {
-    pub last_run: Option<Instant>,
+    pub last_run: Option<DateTime<Utc>>,
 }
 
 impl AppHealth {
     /// Update the last run time
     pub fn update(&mut self) {
-        self.last_run = Some(Instant::now());
+        self.last_run = Some(Utc::now());
     }
 
     /// Check if the application is healthy
     pub fn is_healthy(&self) -> bool {
-        if let Some(last_run) = self.last_run {
-            last_run.elapsed().as_secs() < 60
-        } else {
-            false
+        match self.last_run {
+            Some(last_run) => {
+                let now = Utc::now();
+                let duration = now.signed_duration_since(last_run);
+
+                duration.num_seconds() < 60
+            }
+            None => false,
         }
     }
 }

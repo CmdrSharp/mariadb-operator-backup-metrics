@@ -24,10 +24,10 @@ pub async fn watch(state: SharedAppState) -> Result<()> {
             cache.insert(item.name_any(), item);
             state.update_cache(cache).await;
 
-            // Update the AppHealth
-            let mut health = state.health().await;
-            health.update();
-            state.update_health(health).await;
+            // Trigger a re-generation of metrics
+            let mut metrics = state.metrics().await;
+            metrics.generate(&state).await;
+            state.update_metrics(metrics).await;
         }
     }
 
@@ -51,7 +51,8 @@ pub async fn watch(state: SharedAppState) -> Result<()> {
 async fn _watch(api: Api<BackupCrd>, state: SharedAppState) -> Result<()> {
     tracing::info!("Watching for backup resources");
 
-    let mut watcher_stream = Box::pin(watcher(api, watcher::Config::default()).applied_objects());
+    let mut watcher_stream =
+        Box::pin(watcher(api, watcher::Config::default()).applied_objects());
     let mut interval = time::interval(Duration::from_secs(10));
 
     loop {
@@ -76,15 +77,16 @@ async fn _watch(api: Api<BackupCrd>, state: SharedAppState) -> Result<()> {
                 let mut cache = state.cache().await;
                 cache.insert(resource.name_any(), resource);
                 state.update_cache(cache).await;
-
-                // Update the AppHealth
-                let mut health = state.health().await;
-                health.update();
-                state.update_health(health).await;
             }
             Either::Right(_) => {
                 tracing::debug!("Interval tick");
 
+                // Trigger a re-generation of metrics
+                let mut metrics = state.metrics().await;
+                metrics.generate(&state).await;
+                state.update_metrics(metrics).await;
+
+                // Update the AppHealth
                 let mut health = state.health().await;
                 health.update();
                 state.update_health(health).await;

@@ -40,3 +40,72 @@ pub struct MariaDbRef {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub namespace: Option<String>,
 }
+
+impl BackupStatus {
+    /// Checks if the last transition state for the backup is successful
+    pub fn success(&self) -> bool {
+        if self.conditions.is_none() {
+            return false;
+        }
+
+        self.conditions
+            .as_ref()
+            .unwrap()
+            .iter()
+            .filter(|c| c.type_ == "Complete" && c.status == "True")
+            .count()
+            > 0
+    }
+
+    /// Checks if the transition state indicates a scheduled backup
+    pub fn scheduled(&self) -> bool {
+        if self.conditions.is_none() {
+            return false;
+        }
+
+        self.conditions
+            .as_ref()
+            .unwrap()
+            .iter()
+            .filter(|c| {
+                c.type_ == "Complete"
+                    && c.status == "False"
+                    && c.message == Some("Scheduled".into())
+            })
+            .count()
+            > 0
+    }
+
+    /// Checks if a backup is running
+    pub fn running(&self) -> bool {
+        if self.conditions.is_none() {
+            return false;
+        }
+
+        self.conditions
+            .as_ref()
+            .unwrap()
+            .iter()
+            .filter(|c| {
+                c.type_ == "Complete"
+                    && c.status == "False"
+                    && c.message == Some("Running".into())
+            })
+            .count()
+            > 0
+    }
+
+    /// Checks if a backup has likely failed
+    pub fn failed(&self) -> bool {
+        !self.running() && !self.success() && !self.scheduled()
+    }
+
+    /// Get the reason for the last transition state
+    pub fn reason(&self) -> Option<String> {
+        self.conditions
+            .as_ref()?
+            .iter()
+            .find(|c| c.type_ == "Complete")
+            .and_then(|c| c.reason.clone())
+    }
+}

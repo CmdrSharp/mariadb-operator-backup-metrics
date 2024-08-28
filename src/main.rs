@@ -8,7 +8,6 @@ use tokio::{
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-mod crd;
 mod server;
 mod watcher;
 

@@ -1,4 +1,6 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::get, Router};
+use axum::{
+    extract::State, http::StatusCode, response::IntoResponse, routing::get, Router,
+};
 use color_eyre::eyre::Result;
 use mariadb_operator_backup_metrics::SharedAppState;
 use std::net::SocketAddr;
@@ -7,11 +9,13 @@ use std::net::SocketAddr;
 pub async fn start_server(state: SharedAppState) -> Result<()> {
     tracing::info!("Starting web server");
 
-    let addr: SocketAddr = format!("{}:{}", state.args().bind_address, state.args().bind_port)
-        .parse()
-        .expect("Unable to parse address");
+    let addr: SocketAddr =
+        format!("{}:{}", state.args().bind_address, state.args().bind_port)
+            .parse()
+            .expect("Unable to parse address");
 
     let app = Router::new()
+        .route("/metrics", get(metrics))
         .route("/alive", get(alive))
         .route("/health", get(health))
         .with_state(state);
@@ -25,6 +29,11 @@ pub async fn start_server(state: SharedAppState) -> Result<()> {
     .await?;
 
     Ok(())
+}
+
+/// Returns the Prometheus metrics
+async fn metrics(State(state): State<SharedAppState>) -> impl IntoResponse {
+    state.metrics().await.rendered()
 }
 
 /// Returns OK if the web server is alive, used for Kubernetes Aliveness Check
