@@ -1,0 +1,7 @@
+apiVersion: v2
+name: mariadb-operator-backup-metrics
+description: Exposes metrics from the Backup CRD's in MariaDB Operator
+
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
