@@ -1,4 +1,4 @@
-use crate::AppState;
+use crate::{crd::BackupStatus, AppState};
 use std::collections::HashMap;
 
 type MetricName = String;
@@ -29,33 +29,65 @@ impl MetricCache {
                 continue;
             }
 
-            let status = crd.status.unwrap();
+            let crd_status = crd.status.unwrap();
 
-            // Find an existing, or create a new metric
-            let mut metric = self
-                .find_or_create_metric(("backup_last_run_status".into(), name.clone()))
-                .await;
-
-            // Insert the reason (if it exists on the status)
-            metric
-                .labels
-                .insert("reason".into(), status.reason().unwrap_or("Unknown".into()));
-
-            // Set the value of the metric based on the status
-            if status.success() {
-                metric.value = 1;
-            }
-
-            if status.failed() {
-                metric.value = 0;
-            }
+            // Generate metrics
+            let status = self.status(name.clone(), &crd_status).await;
+            let timestamp = self.timestamp(name.clone(), &crd_status).await;
 
             // Insert the metric back into the cache
             self.metrics
-                .insert(("backup_last_run_status".into(), name.clone()), metric);
+                .insert(("backup_last_run_status".into(), name.clone()), status);
+
+            if let Some(timestamp) = timestamp {
+                self.metrics.insert(
+                    ("backup_last_run_timestamp".into(), name.clone()),
+                    timestamp,
+                );
+            }
         }
 
         self.render().await;
+    }
+
+    /// Generate a status metric
+    async fn status(&self, name: String, status: &BackupStatus) -> GaugeMetric {
+        let mut metric = self
+            .find_or_create_metric(("backup_last_run_status".into(), name.clone()))
+            .await;
+
+        metric
+            .labels
+            .insert("reason".into(), status.reason().unwrap_or("Unknown".into()));
+
+        if status.success() {
+            metric.value = 1;
+        }
+
+        if status.failed() {
+            metric.value = 0;
+        }
+
+        metric
+    }
+
+    /// Generate a timestamp metric
+    async fn timestamp(
+        &self,
+        name: String,
+        status: &BackupStatus,
+    ) -> Option<GaugeMetric> {
+        let mut metric = self
+            .find_or_create_metric(("backup_last_run_timestamp".into(), name.clone()))
+            .await;
+
+        if status.success() {
+            if let Some(timestamp) = status.last_run() {
+                metric.value = timestamp as usize;
+            }
+        }
+
+        None
     }
 
     /// Get the rendered metrics
