@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  mariadb-operator-backup-metrics:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2024-08-28T20:28:02.026913302Z"
+    description: Exposes metrics from the Backup CRD's in MariaDB Operator
+    digest: 6f9c57685e9880cbbf370ac06ddfcb849e346ed1abd492a8b66072c586ec896f
+    name: mariadb-operator-backup-metrics
+    type: application
+    urls:
+    - https://github.com/CmdrSharp/mariadb-operator-backup-metrics/releases/download/mariadb-operator-backup-metrics-0.1.0/mariadb-operator-backup-metrics-0.1.0.tgz
+    version: 0.1.0
+generated: "2024-08-28T20:28:02.02695523Z"
