@@ -87,21 +87,15 @@ impl MetricCache {
             .find_or_create_metric(("backup_last_run_timestamp".into(), name.clone()))
             .await;
 
-        if status.success() {
-            tracing::debug!("Status is successful for resource {}", name.clone());
-
-            if let Some(timestamp) = status.last_run() {
-                tracing::debug!(
-                    "Setting timestamp: {} for resource {}",
-                    timestamp,
-                    name.clone()
-                );
-
-                metric.value = timestamp as usize;
-            }
+        if !status.success() {
+            return None;
         }
 
-        None
+        if let Some(timestamp) = status.last_run() {
+            metric.value = timestamp as usize;
+        }
+
+        Some(metric)
     }
 
     /// Get the rendered metrics
